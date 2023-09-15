@@ -41,7 +41,7 @@ def main():
     model = get_model()
 
     # Fit model on training data
-    model.fit(x_train, y_train,batch_size=24, epochs=EPOCHS)
+    model.fit(x_train, y_train, epochs=EPOCHS)
 
     # Evaluate neural network performance
     model.evaluate(x_test,  y_test, verbose=2)
@@ -109,19 +109,18 @@ def get_model():
 
         # Add convolutional layers
         # RELU activation function is optimal in computer vision problems.
-        model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(IMG_WIDTH,IMG_HEIGHT,3)))
+        model.add(layers.Conv2D(16, (3, 3), activation='relu', input_shape=(IMG_WIDTH,IMG_HEIGHT,3)))
         model.add(layers.MaxPooling2D((2, 2)))
-
+        model.add(layers.BatchNormalization(axis=-1))
+        model.add(layers.Conv2D(32, (3, 3), activation='relu'))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.BatchNormalization(axis=-1))
         model.add(layers.Conv2D(64, (3, 3), activation='relu'))
         model.add(layers.MaxPooling2D((2, 2)))
-
-        model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-        model.add(layers.MaxPooling2D((2, 2)))
-        
-       
+        model.add(layers.BatchNormalization(axis=-1))
         # Flatten the output and add fully connected layers
         model.add(layers.Flatten())
-        
+        model.add(layers.BatchNormalization())
         # Add a dropout layer to prevent overfitting
         model.add(layers.Dropout(0.5))
 
@@ -136,7 +135,7 @@ def get_model():
     
     
     # Define the optimizer with an initial learning rate
-    initial_learning_rate = 0.002
+    initial_learning_rate = 0.001
     optimizer = Adam(learning_rate=initial_learning_rate)
 
     # Define the metrics
