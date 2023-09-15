@@ -5,6 +5,8 @@ import sys
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from concurrent.futures import ThreadPoolExecutor
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.metrics import Precision, Recall
 
 from sklearn.model_selection import train_test_split
 
@@ -17,7 +19,7 @@ THREADS = 8
 
 #-------------------------------------------------------
 # RESULTS
-# loss: 0.0718 - accuracy: 0.9852 - 4s/epoch - 12ms/step
+#  loss: 0.0390 - accuracy: 0.9881 - precision: 0.9901 - recall: 0.9861 - f1_score: 0.4541 - 3s/epoch - 8ms/step
 #-------------------------------------------------------
 
 def main():
@@ -39,7 +41,7 @@ def main():
     model = get_model()
 
     # Fit model on training data
-    model.fit(x_train, y_train,batch_size=32, epochs=EPOCHS)
+    model.fit(x_train, y_train,batch_size=24, epochs=EPOCHS)
 
     # Evaluate neural network performance
     model.evaluate(x_test,  y_test, verbose=2)
@@ -115,9 +117,13 @@ def get_model():
 
         model.add(layers.Conv2D(128, (3, 3), activation='relu'))
         model.add(layers.MaxPooling2D((2, 2)))
-
+        
+       
         # Flatten the output and add fully connected layers
         model.add(layers.Flatten())
+        
+        # Add a dropout layer to prevent overfitting
+        model.add(layers.Dropout(0.5))
 
         # Use softmax activation function to normalize the output.
         # Softmax is a Sigmoid function that handles multiclass problems.
@@ -127,14 +133,39 @@ def get_model():
     
     model = create_cnn_model()
 
+    
+    
+    # Define the optimizer with an initial learning rate
+    initial_learning_rate = 0.002
+    optimizer = Adam(learning_rate=initial_learning_rate)
+
+    # Define the metrics
+    metrics = ['accuracy', Precision(name='precision'), Recall(name='recall'), f1_score]
+    
     # Compile the model
-    # TODO: configure further the compiler
-    model.compile(optimizer='adam',
+    model.compile(optimizer=optimizer,
                 loss='categorical_crossentropy',
-                metrics=['accuracy'])
+                metrics=metrics)
 
 
     return model
 
+def f1_score(y_true, y_pred):
+    # Convert predictions to binary values (0 or 1)
+    y_pred_bin = tf.keras.backend.round(y_pred)
+    
+    # Calculate true positives, false positives, and false negatives
+    tp = tf.keras.backend.sum(tf.keras.backend.round(y_true * y_pred_bin), axis=0)
+    fp = tf.keras.backend.sum(tf.keras.backend.round((1 - y_true) * y_pred_bin), axis=0)
+    fn = tf.keras.backend.sum(tf.keras.backend.round(y_true * (1 - y_pred_bin)), axis=0)
+    
+    # Calculate precision and recall
+    precision = tp / (tp + fp + tf.keras.backend.epsilon())
+    recall = tp / (tp + fn + tf.keras.backend.epsilon())
+    
+    # Calculate F1-score
+    f1 = 2 * (precision * recall) / (precision + recall + tf.keras.backend.epsilon())
+    
+    return tf.keras.backend.mean(f1)
 if __name__ == "__main__":
     main()
